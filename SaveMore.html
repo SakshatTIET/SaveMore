@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Spending Limit Tracker</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8f8f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background-color: #fff;
+      border-radius: 15px;
+      padding: 30px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      width: 800px;
+      text-align: center;
+      overflow-y: auto; /* Enable vertical scrolling */
+      max-height: calc(100vh - 60px); /* Set max height to fit within viewport */
+    }
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+    select, input[type="number"], button {
+      width: 80%;
+      padding: 15px;
+      margin: 15px auto;
+      display: block;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+      box-sizing: border-box;
+      font-size: 18px;
+      transition: border-color 0.3s;
+    }
+    select:focus, input[type="number"]:focus, button:focus {
+      outline: none;
+      border-color: #5a9bd5;
+    }
+    #submitBtn, #addBtn {
+      background-color: #683BAE;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    #submitBtn:hover, #addBtn:hover {
+      background-color: #683BAE;
+    }
+    #warning {
+      color: red;
+      margin-top: 10px;
+      display: none;
+      font-style: italic;
+    }
+    canvas {
+      margin-top: 20px;
+      border-radius: 10px;
+      border: 2px solid #ddd;
+      display: inline-block; /* Adjusted */
+      vertical-align: top; /* Adjusted */
+    }
+    #legend {
+      margin-top: 20px;
+      text-align: left;
+      margin-left: 20px;
+      font-size: 18px;
+      display: inline-block; /* Adjusted */
+      vertical-align: top; /* Adjusted */
+    }
+    #suggestion {
+      margin-top: 20px;
+      text-align: left;
+      margin-left: 20px;
+    }
+    #suggestion p {
+      margin-bottom: 10px;
+      font-size: 20px;
+    }
+    #suggestion ul {
+      padding-left: 20px;
+    }
+    #suggestion ul li {
+      margin-bottom: 5px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Spending Limit Tracker</h1>
+    <div>
+      <label for="category">Select Category:</label>
+      <select id="category">
+        <option value="textbooks">Textbooks</option>
+        <option value="food">Food</option>
+        <option value="transportation">Transportation</option>
+        <option value="entertainment">Entertainment</option>
+        <option value="stationery">Stationery</option>
+        <option value="personal">Personal Expenses</option>
+        <!-- Add more options as needed -->
+      </select>
+    </div>
+    <input type="number" id="amount" placeholder="Enter amount">
+    <button id="addBtn" onclick="addTransaction()">Add Transaction</button>
+    <div id="transactionList"></div>
+    <p id="totalExpenditure">Total Expenditure: ₹0.00</p>
+    <input type="number" id="dailyLimit" placeholder="Enter your daily spending limit">
+    <button id="submitBtn" onclick="checkLimit()">Submit</button>
+    <p id="warning">Warning: Daily spending limit exceeded!</p>
+    <p id="remainingLimit"></p>
+    <canvas id="categoryChart" width="400" height="400"></canvas>
+    <div id="legend"></div>
+    <div id="suggestion">
+      <p>Here are some tips to save money:</p>
+      <ul>
+        <li>Rent or buy used textbooks to save on textbook expenses.</li>
+        <li>Plan and prepare your meals to save on food costs. Consider buying groceries in bulk and cooking at home.</li>
+        <li>Use public transportation or carpooling to save on transportation expenses.</li>
+        <li>Explore free or low-cost entertainment options such as campus events, outdoor activities, or streaming services.</li>
+        <li>Buy stationery items in bulk and reuse whenever possible.</li>
+        <li>Limit personal expenses by setting a budget and avoiding impulse purchases.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    var transactions = [];
+    var total = 0;
+
+    function addTransaction() {
+      var category = document.getElementById('category').value;
+      var amount = parseFloat(document.getElementById('amount').value);
+
+      transactions.push({ category: category, amount: amount });
+      updateTransactionList();
+      updateTotalExpenditure();
+      drawCategoryChart();
+    }
+
+    function updateTransactionList() {
+      var transactionList = document.getElementById('transactionList');
+      transactionList.innerHTML = '';
+      transactions.forEach(function(transaction) {
+        var transactionItem = document.createElement('p');
+        transactionItem.textContent = transaction.category + ": ₹" + transaction.amount.toFixed(2);
+        transactionList.appendChild(transactionItem);
+      });
+    }
+
+    function updateTotalExpenditure() {
+      total = transactions.reduce(function(acc, transaction) {
+        return acc + transaction.amount;
+      }, 0);
+      document.getElementById('totalExpenditure').textContent = "Total Expenditure: ₹" + total.toFixed(2);
+    }
+
+    function checkLimit() {
+      var dailyLimit = parseFloat(document.getElementById('dailyLimit').value);
+      var warning = document.getElementById('warning');
+      var remainingLimit = document.getElementById('remainingLimit');
+
+      if (total > dailyLimit) {
+        warning.style.display = 'block';
+      } else {
+        warning.style.display = 'none';
+      }
+
+      // Calculate and display remaining limit
+      var remaining = dailyLimit - total;
+      remainingLimit.textContent = "Remaining Daily Limit: ₹" + remaining.toFixed(2);
+
+      // Update suggestion based on spending
+      updateSuggestion();
+    }
+
+    function updateSuggestion() {
+      var suggestion = document.getElementById('suggestion');
+      var totalTextbooks = getTotalForCategory('textbooks');
+      var totalFood = getTotalForCategory('food');
+      var totalTransportation = getTotalForCategory('transportation');
+
+      if (totalTextbooks > totalFood && totalTextbooks > totalTransportation) {
+        suggestion.innerHTML = "<p>Rent or buy used textbooks to save on textbook expenses. Also, consider selling your old textbooks to offset the cost of new ones.</p>";
+      } else if (totalFood > totalTextbooks && totalFood > totalTransportation) {
+        suggestion.innerHTML = "<p>Plan and prepare your meals to save on food costs. Consider buying groceries in bulk and cooking at home.</p>";
+      } else {
+        suggestion.innerHTML = "<p>Use public transportation or carpooling to save on transportation expenses. Also, consider biking or walking if feasible.</p>";
+      }
+    }
+
+    function getTotalForCategory(category) {
+      return transactions.reduce(function(acc, transaction) {
+        return transaction.category === category ? acc + transaction.amount : acc;
+      }, 0);
+    }
+
+    function drawCategoryChart() {
+      var canvas = document.getElementById('categoryChart');
+      var ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      var categoryData = {};
+
+      transactions.forEach(function(transaction) {
+        if (categoryData[transaction.category]) {
+          categoryData[transaction.category] += transaction.amount;
+        } else {
+          categoryData[transaction.category] = transaction.amount;
+        }
+      });
+
+      var colors = ['#ff9999', '#99ff99', '#9999ff', '#ffcc99', '#99ccff', '#cc99ff'];
+      var i = 0;
+      var totalAmount = Object.values(categoryData).reduce((a, b) => a + b, 0);
+
+      var startAngle = 0;
+      for (var category in categoryData) {
+        var sliceAngle = (categoryData[category] / totalAmount) * 2 * Math.PI;
+        var percent = ((categoryData[category] / totalAmount) * 100).toFixed(2);
+        ctx.fillStyle = colors[i];
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, canvas.height / 2);
+        ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2, startAngle, startAngle + sliceAngle);
+        ctx.lineTo(canvas.width / 2, canvas.height / 2);
+        ctx.fill();
+        startAngle += sliceAngle;
+        i++;
+        // Display percentages
+        ctx.font = "14px Arial";
+        ctx.fillStyle = "#000";
+        var midAngle = startAngle - sliceAngle / 2;
+        var x = canvas.width / 2 + Math.cos(midAngle) * 120;
+        var y = canvas.height / 2 + Math.sin(midAngle) * 120;
+        ctx.fillText(percent + "%", x, y);
+        // Display category name
+        ctx.fillText(category, x - 50, y + 20);
+      }
+    }
+  </script>
+</body>
+</html>
